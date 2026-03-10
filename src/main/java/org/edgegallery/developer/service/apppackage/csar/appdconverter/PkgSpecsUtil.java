@@ -1,0 +1,157 @@
+/*
+ * Copyright 2021 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
+package org.edgegallery.developer.service.apppackage.csar.appdconverter;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import lombok.Getter;
+import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
+import org.edgegallery.developer.model.application.vm.EnumAppPackageType;
+import org.edgegallery.developer.model.apppackage.appd.InputParam;
+import org.edgegallery.developer.model.apppackage.appd.NodeTemplate;
+import org.edgegallery.developer.model.apppackage.appd.TopologyTemplate;
+import org.edgegallery.developer.model.apppackage.appd.vdu.VDUCapability;
+import org.edgegallery.developer.model.apppackage.appd.vdu.VDUProperty;
+import org.edgegallery.developer.model.apppackage.constant.AppdConstants;
+import org.edgegallery.developer.model.apppackage.constant.InputConstant;
+import org.edgegallery.developer.model.resource.pkgspec.PkgSpec;
+import org.edgegallery.developer.model.resource.pkgspec.PkgSpecConstants;
+import org.edgegallery.developer.model.resource.vm.Flavor;
+import org.edgegallery.developer.service.recource.pkgspec.PkgSpecService;
+import org.edgegallery.developer.util.SpringContextUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
+
+public class PkgSpecsUtil {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PkgSpecsUtil.class);
+
+    private PkgSpecService pkgSpecService = (PkgSpecService) SpringContextUtil.getBean(PkgSpecService.class);
+
+    @Getter
+    @Setter
+    private PkgSpec pkgSpec;
+
+    public void init(String pkgSpecId) {
+        pkgSpec = pkgSpecService.getPkgSpecById(pkgSpecId);
+    }
+
+    public void updateVDUCapabilities(TopologyTemplate topologyTemplate, String vduName, NodeTemplate vduNode,
+        Flavor flavor, int vduIndex) {
+        if (null != pkgSpec && PkgSpecConstants.PKG_SPEC_SUPPORT_FIXED_FLAVOR.equals(pkgSpec.getId())) {
+            VDUCapability capability = new VDUCapability(flavor.getMemory() * AppdConstants.MEMORY_SIZE_UNIT,
+                flavor.getCpu(), flavor.getArchitecture(), flavor.getDataDiskSize());
+            vduNode.setCapabilities(capability);
+        } else {
+            String memInputName = InputConstant.COMPUTE_NAME_PREFIX + InputConstant.INPUT_MEM_POSTFIX + vduIndex;
+            String cpuInputName = InputConstant.COMPUTE_NAME_PREFIX + InputConstant.INPUT_VCPU_POSTFIX + vduIndex;
+            String diskInputName = vduName + vduIndex + InputConstant.INPUT_DATADISK_POSTFIX + vduIndex
+                + InputConstant.VDU_SIZE_SUFFIX;
+            InputParam memInput = new InputParam(InputConstant.TYPE_STRING,
+                flavor.getMemory() * AppdConstants.MEMORY_SIZE_UNIT,
+                vduName + vduIndex + InputConstant.INPUT_MEM_DES_POSTFIX);
+            InputParam cpuInput = new InputParam(InputConstant.TYPE_STRING, flavor.getCpu(),
+                vduName + vduIndex + InputConstant.INPUT_VCPU_DES_POSTFIX);
+            InputParam diskInput = new InputParam(InputConstant.TYPE_STRING, flavor.getDataDiskSize(),
+                vduName + vduIndex + InputConstant.INPUT_DATADISK_POSTFIX + vduIndex
+                    + InputConstant.INPUT_DATADISK_SIZE_POSTFIX);
+            topologyTemplate.getInputs().put(cpuInputName, cpuInput);
+            topologyTemplate.getInputs().put(memInputName, memInput);
+            topologyTemplate.getInputs().put(diskInputName, diskInput);
+            VDUCapability capability = new VDUCapability(getInputStr(memInputName), getInputStr(cpuInputName),
+                flavor.getArchitecture(), getInputStr(diskInputName));
+            vduNode.setCapabilities(capability);
+        }
+    }
+
+    public void updateFlavorExtraSpecs(TopologyTemplate topologyTemplate, String vduName, VDUProperty property,
+        String flavorExtraSpecsStr, EnumAppPackageType appPackageType) {
+        LinkedHashMap<String, String> mapSpecs = analyzeVMFlavorExtraSpecs(flavorExtraSpecsStr);
+        if (null == mapSpecs) {
+            return;
+        }
+        if (null != pkgSpec && PkgSpecConstants.PKG_SPEC_SUPPORT_FIXED_FLAVOR.equals(pkgSpec.getId())) {
+            if (mapSpecs.containsKey(InputConstant.FLAVOR_EXTRA_SPECS_HOST_AGGR)) {
+                String sgLabel = mapSpecs.get(InputConstant.FLAVOR_EXTRA_SPECS_HOST_AGGR);
+                mapSpecs.remove(InputConstant.FLAVOR_EXTRA_SPECS_HOST_AGGR);
+                mapSpecs.put(sgLabel, "true");
+            }
+        } else {
+            if (mapSpecs.containsKey(InputConstant.FLAVOR_EXTRA_SPECS_GPU)) {
+                String gpuInputName = vduName + InputConstant.INPUT_GPU_POSTFIX;
+                String gpuVal = mapSpecs.get(InputConstant.FLAVOR_EXTRA_SPECS_GPU);
+                InputParam gpuInput = new InputParam(InputConstant.TYPE_STRING, gpuVal, gpuInputName);
+                topologyTemplate.getInputs().put(gpuInputName, gpuInput);
+                mapSpecs.replace(InputConstant.FLAVOR_EXTRA_SPECS_GPU, getInputStr(gpuInputName));
+            }
+            if (mapSpecs.containsKey(InputConstant.FLAVOR_EXTRA_SPECS_HOST_AGGR)) {
+                String hostAggrInputName = vduName + InputConstant.INPUT_HOST_AGGR_POSTFIX;
+                String hostAggrLabel = mapSpecs.get(InputConstant.FLAVOR_EXTRA_SPECS_HOST_AGGR);
+                InputParam hostAggrInput = new InputParam(InputConstant.TYPE_STRING, hostAggrLabel, hostAggrInputName);
+                topologyTemplate.getInputs().put(hostAggrInputName, hostAggrInput);
+
+                mapSpecs
+                    .replace(InputConstant.FLAVOR_EXTRA_SPECS_HOST_AGGR, getFlavorHostAggrInputStr(hostAggrInputName));
+                LOGGER.info("vmPkgType:{}", appPackageType);
+                if (appPackageType.equals(EnumAppPackageType.PUBLISH_PACKAGE)) {
+                    mapSpecs.replace(InputConstant.FLAVOR_EXTRA_SPECS_HOST_AGGR,
+                        getFlavorHostAggrInputStr(hostAggrInputName));
+                } else {
+                    mapSpecs.remove(InputConstant.FLAVOR_EXTRA_SPECS_HOST_AGGR);
+                    String defaultValue = (String) hostAggrInput.getDefaultValue();
+                    LOGGER.info("defaultValue:{}", defaultValue);
+                    mapSpecs.put(getFlavorHostAggrInputKey(defaultValue), "true");
+                   
+                }
+            }
+        }
+        property.getVduProfile().setFlavorExtraSpecs(mapSpecs);
+    }
+
+    public void updateUserDataParam(TopologyTemplate topologyTemplate, Map<String, String> mapPortParams) {
+        if (null == pkgSpec || PkgSpecConstants.PKG_SPEC_SUPPORT_DYNAMIC_FLAVOR.equals(pkgSpec.getId())) {
+            String campusInputName = InputConstant.INPUT_CAMPUS_SEGMENT;
+            InputParam campusInput = new InputParam(InputConstant.TYPE_STRING, "", campusInputName);
+            if (!topologyTemplate.getInputs().containsKey(campusInputName)) {
+                topologyTemplate.getInputs().put(campusInputName, campusInput);
+            }
+            mapPortParams.put(InputConstant.INPUT_CAMPUS_SEGMENT.toUpperCase(), getInputStr(campusInputName));
+        }
+    }
+
+    private LinkedHashMap<String, String> analyzeVMFlavorExtraSpecs(String flavorExtraSpecsStr) {
+        if (StringUtils.isEmpty(flavorExtraSpecsStr)) {
+            return null;
+        }
+        //generate the definition for FlavorExtraSpecs
+        Yaml yaml = new Yaml(new SafeConstructor());
+        return yaml.load(flavorExtraSpecsStr);
+    }
+
+    private String getInputStr(String inputName) {
+        return InputConstant.GET_INPUT_PREFIX + inputName + InputConstant.GET_INPUT_POSTFIX;
+    }
+
+    private String getFlavorHostAggrInputStr(String inputName) {
+        return "[{\"{get_input:" + inputName + "}\":\"true\"}]";
+    }
+
+    private String getFlavorHostAggrInputKey(String defaultValue) {
+        return InputConstant.FLAVOR_EXTRA_SPECS_HOST_AGGR + ":" + defaultValue;
+    }
+}

@@ -1,0 +1,35 @@
+#!/bin/bash
+# Startup script for Debian_10&Ubuntu_1604 IPV4 #
+
+echo "app_instance_id_key=($$APP_INSTANCE_ID)" >> /home/init.txt
+
+rm -f /etc/network/interfaces
+netname1=`ip a | grep '^2:' | awk -F ':' '{print $2}'|sed 's/^[ \t]*//g'`
+netname2=`ip a | grep '^3:' | awk -F ':' '{print $2}'|sed 's/^[ \t]*//g'`
+netname3=`ip a | grep '^4:' | awk -F ':' '{print $2}'|sed 's/^[ \t]*//g'`
+
+echo "auto lo" >> /etc/network/interfaces
+echo "iface lo inet loopback" >> /etc/network/interfaces
+
+echo "auto ${netname1}" >> /etc/network/interfaces
+echo "iface ${netname1} inet static" >> /etc/network/interfaces
+echo "address $APP_Public_IP$" >> /etc/network/interfaces
+echo "netmask $APP_Public_MASK$" >> /etc/network/interfaces
+echo "post-up route add default gw $APP_Public_GW$ || true" >> /etc/network/interfaces
+echo "pre-down route del default gw $APP_Public_GW$ || true" >> /etc/network/interfaces
+
+echo "auto ${netname2}" >> /etc/network/interfaces
+echo "iface ${netname2} inet static" >> /etc/network/interfaces
+echo "address $APP_Private_IP$" >> /etc/network/interfaces
+echo "netmask $APP_Private_MASK$" >> /etc/network/interfaces
+echo "post-up route add -net $UE_IP_SEGMENT$ gw $APP_Private_GW$ || true" >> /etc/network/interfaces
+echo "pre-down route del -net $UE_IP_SEGMENT$ gw $APP_Private_GW$ || true" >> /etc/network/interfaces
+echo "post-up route add -net $ENTERPRISE_CAMPUS$ gw $APP_Private_GW$ || true" >> /etc/network/interfaces
+echo "pre-down route del -net $ENTERPRISE_CAMPUS$ gw $APP_Private_GW$ || true" >> /etc/network/interfaces
+
+echo "auto ${netname3}" >> /etc/network/interfaces
+echo "iface ${netname3} inet static" >> /etc/network/interfaces
+echo "address $APP_MP1_IP$" >> /etc/network/interfaces
+echo "netmask $APP_MP1_MASK$" >> /etc/network/interfaces
+
+/etc/init.d/networking restart

@@ -1,0 +1,9 @@
+rem cmd
+# Startup script for Win10&WinServer_2012 IPV4 #
+
+for /f "usebackq skip=3 tokens=3*" %%i in ((`netsh interface show interface`)) do netsh interface ip set address "%%j" static $APP_Public_IP$ $APP_Public_MASK$ $APP_Public_GW$
+for /f "usebackq skip=4 tokens=3*" %%i in ((`netsh interface show interface`)) do netsh interface ip set address "%%j" static $APP_Private_IP$ $APP_Private_MASK$
+for /f "usebackq skip=5 tokens=3*" %%i in ((`netsh interface show interface`)) do netsh interface ip set address "%%j" static $APP_MP1_IP$ $APP_MP1_MASK$
+
+route -p add $UE_IP_SEGMENT$ $APP_Private_GW$
+route -p add $ENTERPRISE_CAMPUS$ $APP_Private_GW$

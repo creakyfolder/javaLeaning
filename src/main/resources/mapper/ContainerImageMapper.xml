@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~    Copyright 2021 Huawei Technologies Co., Ltd.
+  ~
+  ~    Licensed under the Apache License, Version 2.0 (the "License");
+  ~    you may not use this file except in compliance with the License.
+  ~    You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~    Unless required by applicable law or agreed to in writing, software
+  ~    distributed under the License is distributed on an "AS IS" BASIS,
+  ~    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~    See the License for the specific language governing permissions and
+  ~    limitations under the License.
+  -->
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.edgegallery.developer.mapper.resource.container.ContainersImageMapper">
+
+    <resultMap id="ContainerImageMap"
+               type="org.edgegallery.developer.model.resource.container.ContainerImage">
+        <id property="imageId" column="image_id"/>
+        <result property="imageName" column="image_name"/>
+        <result property="imageVersion" column="image_version"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="uploadTime" column="upload_time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="imageStatus" column="image_status"/>
+        <result property="imageType" column="image_type"/>
+        <result property="imagePath" column="image_path"/>
+        <result property="fileName" column="file_name"/>
+    </resultMap>
+
+    <insert id="createContainerImage"
+            parameterType="org.edgegallery.developer.model.resource.container.ContainerImage">
+        insert into
+        tbl_container_image (image_id, image_name, image_version, user_id, user_name, upload_time,
+        create_time,image_status,image_type,image_path,file_name)
+        values
+        ( #{imageId}, #{imageName}, #{imageVersion}, #{userId}, #{userName}, #{uploadTime},
+        #{createTime},#{imageStatus},#{imageType},#{imagePath},#{fileName})
+    </insert>
+
+
+    <select id="getContainerImage" parameterType="String" resultMap="ContainerImageMap">
+        SELECT
+        *
+        FROM
+        tbl_container_image
+        WHERE
+        image_id = #{imageId}
+    </select>
+
+    <select id="getAllImage" resultMap="ContainerImageMap">
+        SELECT
+        *
+        FROM
+        tbl_container_image
+    </select>
+
+    <select id="getAllImageByAdminAuth"
+            parameterType="org.edgegallery.developer.model.resource.container.ContainerImageReq"
+            resultMap="ContainerImageMap">
+        SELECT
+        image_id,image_name,image_version,user_id,user_name,
+        to_char(create_time, 'YYYY-MM-DD HH24:MI:SS') as create_time,
+        to_char(upload_time, 'YYYY-MM-DD HH24:MI:SS') as upload_time,
+        image_status,image_type,image_path,file_name
+        FROM
+        tbl_container_image
+        <where>
+            <if test="imageName != null and imageName !=''">
+                and lower(image_name) like lower(CONCAT('%', #{imageName}, '%'))
+            </if>
+            <if test="uploadTimeBegin != null and uploadTimeBegin != ''">
+                <![CDATA[ and upload_time >= to_timestamp(#{uploadTimeBegin}, 'YYYY-MM-DD HH24:MI:SS') ]]>
+            </if>
+            <if test="uploadTimeEnd != null and uploadTimeEnd != ''">
+                <![CDATA[ and upload_time <= to_timestamp(#{uploadTimeEnd}, 'YYYY-MM-DD HH24:MI:SS') ]]>
+            </if>
+        </where>
+        <if test="sortBy != null and sortBy != '' and sortOrder != null and sortOrder != ''">
+            order by ${sortBy} ${sortOrder}
+        </if>
+    </select>
+
+    <select id="getAllImageByOrdinaryAuth"
+            parameterType="org.edgegallery.developer.model.resource.container.ContainerImageReq"
+            resultMap="ContainerImageMap">
+        select * from (
+        SELECT
+        image_id,image_name,image_version,user_id,user_name,
+        to_char(create_time, 'YYYY-MM-DD HH24:MI:SS') as create_time,
+        to_char(upload_time, 'YYYY-MM-DD HH24:MI:SS') as upload_time,
+        image_status,image_type,image_path,file_name
+        FROM
+        tbl_container_image
+        <where>
+            <if test="userId != null and userId !=''">
+                and user_id =#{userId} or image_type = 'public'
+            </if>
+        </where>
+        <if test="sortBy != null and sortBy != '' and sortOrder != null and sortOrder != ''">
+            order by ${sortBy} ${sortOrder}
+        </if>
+        ) a
+        <where>
+            <if test="imageName != null and imageName !=''">
+                and lower(a.image_name) like lower(CONCAT('%', #{imageName}, '%'))
+            </if>
+            <if test="uploadTimeBegin != null and uploadTimeBegin != ''">
+                <![CDATA[ and to_timestamp(a.upload_time,'YYYY-MM-DD HH24:MI:SS') >= to_timestamp(#{uploadTimeBegin}, 'YYYY-MM-DD HH24:MI:SS') ]]>
+            </if>
+            <if test="uploadTimeEnd != null and uploadTimeEnd != ''">
+                <![CDATA[ and to_timestamp(a.upload_time,'YYYY-MM-DD HH24:MI:SS') <= to_timestamp(#{uploadTimeEnd}, 'YYYY-MM-DD HH24:MI:SS') ]]>
+            </if>
+        </where>
+    </select>
+
+    <select id="getAllImageByAdmin" resultMap="ContainerImageMap">
+        select * from tbl_container_image
+    </select>
+
+    <update id="updateContainerImageType" parameterType="java.lang.String">
+        update tbl_container_image
+        set image_type=#{imageType}
+        where image_id=#{imageId} and user_id =#{userId}
+    </update>
+
+    <update id="updateContainerImage">
+        update tbl_container_image
+        set
+        image_name=#{containerImage.imageName},image_version=#{containerImage.imageVersion},user_id=#{containerImage.userId},
+        user_name=#{containerImage.userName},upload_time=#{containerImage.uploadTime},create_time=#{containerImage.createTime},
+        image_status=#{containerImage.imageStatus},image_type=#{containerImage.imageType},image_path=#{containerImage.imagePath},
+        file_name=#{containerImage.fileName} where image_id=#{oldImageId}
+    </update>
+
+    <delete id="deleteContainerImageById" parameterType="java.lang.String">
+        delete from tbl_container_image where image_id=#{imageId}
+    </delete>
+
+</mapper>

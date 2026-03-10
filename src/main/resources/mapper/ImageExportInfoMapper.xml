@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~    Copyright 2021 Huawei Technologies Co., Ltd.
+  ~
+  ~    Licensed under the Apache License, Version 2.0 (the "License");
+  ~    you may not use this file except in compliance with the License.
+  ~    You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~    Unless required by applicable law or agreed to in writing, software
+  ~    distributed under the License is distributed on an "AS IS" BASIS,
+  ~    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~    See the License for the specific language governing permissions and
+  ~    limitations under the License.
+  -->
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.edgegallery.developer.mapper.application.vm.ImageExportInfoMapper">
+
+  <resultMap id="ImageExportInfoMap" type="org.edgegallery.developer.model.instantiate.vm.ImageExportInfo">
+    <result property="imageInstanceId" column="image_instance_id"/>
+    <result property="operationId" column="operation_id"/>
+    <result property="name" column="name"/>
+    <result property="imageFileName" column="image_file_name"/>
+    <result property="format" column="format"/>
+    <result property="downloadUrl" column="download_url"/>
+    <result property="checkSum" column="check_sum"/>
+    <result property="imageSize" column="image_size"/>
+    <result property="log" column="log"/>
+    <result property="status" column="status"/>
+    <result property="createTime" column="create_time"/>
+  </resultMap>
+
+  <sql id="ImageExportInfoAllColumn">
+    image_instance_id, operation_id, name, image_file_name, format, download_url, check_sum, image_size, log, status, create_time
+  </sql>
+
+  <insert id="createImageExportInfoInfo">
+    insert into tbl_vm_image_export_info (vm_id, image_instance_id, operation_id, name, image_file_name, format, download_url, check_sum, image_size, log, status, create_time)
+    values
+    ( #{vmId}, #{imageExportInfo.imageInstanceId}, #{imageExportInfo.operationId}, #{imageExportInfo.name}, #{imageExportInfo.imageFileName}, #{imageExportInfo.format},
+    #{imageExportInfo.downloadUrl}, #{imageExportInfo.checkSum}, #{imageExportInfo.imageSize},
+    #{imageExportInfo.log},  #{imageExportInfo.status}, now())
+  </insert>
+
+  <update id="modifyImageExportInfoInfoByVMId">
+    UPDATE
+    tbl_vm_image_export_info
+    SET
+    image_instance_id = #{imageExportInfo.imageInstanceId}, name = #{imageExportInfo.name}, image_file_name = #{imageExportInfo.imageFileName},
+    format = #{imageExportInfo.format}, download_url = #{imageExportInfo.downloadUrl},
+    check_sum = #{imageExportInfo.checkSum}, image_size = #{imageExportInfo.imageSize},
+    log = #{imageExportInfo.log}, status = #{imageExportInfo.status}
+    WHERE
+    vm_id = #{vmId}
+  </update>
+
+  <delete id="deleteImageExportInfoInfoByVMId" parameterType="String">
+    DELETE FROM tbl_vm_image_export_info WHERE vm_id = #{vmId};
+  </delete>
+
+  <select id="getImageExportInfoInfoByVMId" parameterType="String" resultMap="ImageExportInfoMap">
+    SELECT
+    <include refid="ImageExportInfoAllColumn"/>
+    FROM tbl_vm_image_export_info where vm_id = #{vmId}
+  </select>
+
+</mapper>

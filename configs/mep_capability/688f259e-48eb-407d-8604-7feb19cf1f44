@@ -1,0 +1,266 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Location API",
+    "version": "1.0.0",
+    "description": "The ETSI MEC ISG MEC013 Location API described using OpenAPI.  The API is based on the Open Mobile Alliance's specification RESTful Network API for Zonal Presence"
+  },
+  "externalDocs": {
+    "description": "ETSI MEC013 V1.1.1 Location Service API",
+    "url": "http://www.etsi.org/deliver/etsi_gs/MEC/001_099/013/01.01.01_60/gs_mec013v010101p.pdf"
+  },
+  "host": "{HOST}",
+  "basePath": "/mep/location/v1",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "tags": [
+    {
+      "name": "users"
+    },
+    {
+      "name": "zones"
+    },
+    {
+      "name": "subscriptions"
+    }
+  ],
+  "parameters": {
+    "Path.SubscriptionId": {
+      "name": "subscriptionId",
+      "in": "path",
+      "description": "Subscription ID",
+      "required": true,
+      "type": "string"
+    },
+    "Query.address": {
+      "name": "address",
+      "in": "query",
+      "description": "目标UE imsi号码，格式：imsi:xxxxx，举例：imsi:460000000000001",
+      "required": true,
+      "type": "string"
+    },
+    "Body.UserLocationSubscribe": {
+      "name": "userLocationSubscribe",
+      "in": "body",
+      "description": "User Location Subscription",
+      "required": true,
+      "schema": {
+        "$ref": "#/definitions/UserLocationSubscribe"
+      }
+    },
+    "Body.VoidJSON": {
+      "name": "voidJson",
+      "in": "body",
+      "description": "Void Json",
+      "required": true,
+      "schema": {
+        "$ref": "#/definitions/VoidJSON"
+      }
+    }
+  },
+  "paths": {
+    "/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "usersGet",
+        "description": "查询单个目标UE所在位置",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/parameters/Query.address"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "schema": {
+              "properties": {
+                "ueId": {
+                  "description": "目标UE imsi号码，格式：imsi:xxxxx，举例：imsi:460000000000001",
+                  "type": "string"
+                },
+                "locationInfo": {
+                  "description": "目标UE位置信息",
+                  "$ref": "#/definitions/UELocationInfo"
+                },
+                "timestamp": {
+                  "description": "timestamp",
+                  "type": "string",
+                  "example": "1618629715"
+                }
+              }
+            },
+            "examples": {
+              "application/json": {
+                "ueId": "460000000000001",
+                "locationInfo": {
+                  "map_id": 1,
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "timestamp": "1618629715"
+              }
+            }
+          },
+          "400": {
+            "description": "请求消息格式错误"
+          },
+          "429": {
+            "description": "GMLC过载"
+          },
+          "500": {
+            "description": "GMLC系统异常"
+          }
+        }
+      }
+    },
+    "/subscriptions/periodic": {
+      "post": {
+        "tags": [
+          "subscriptions"
+        ],
+        "operationId": "subscribeLocation",
+        "description": "发起订阅",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/parameters/Body.UserLocationSubscribe"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Responses of new subscription",
+            "schema": {
+              "properties": {
+                "subscriptionId": {
+                  "type": "string",
+                  "description": "订阅关联器ID，用于标记已创建的订阅请求，避免重复创建订阅。"
+                }
+              }
+            },
+            "examples": {
+              "application/json": {
+                "subscriptionId": "4297F44B13955235245B2497399D7A93"
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/subscriptions/periodic/{subscriptionId}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/Path.SubscriptionId"
+        },
+        {
+          "$ref": "#/parameters/Body.VoidJSON"
+        }
+      ],
+      "delete": {
+        "tags": [
+          "subscriptions"
+        ],
+        "operationId": "unsubscribeLocation",
+        "description": "取消订阅",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "responses": {
+          "204": {
+            "description": "No content，删除成功"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AddressItem": {
+      "description": "one address info",
+      "type": "string"
+    },
+    "UserLocationSubscribe": {
+      "description": "目标UE位置订阅信息",
+      "type": "object",
+      "required": [
+        "callbackReference"
+      ],
+      "properties": {
+        "callbackReference": {
+          "description": "callback reference",
+          "type": "string",
+          "example": "http://applp:port/location_notifications/××××××××"
+        },
+        "address": {
+          "description": "address",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AddressItem"
+          }
+        },
+        "frequency": {
+          "description": "上报周期，单位ms，有效值：640, 1024, 2048, 5120, 10240,",
+          "type": "integer",
+          "format": "int32",
+          "example": 1024
+        }
+      }
+    },
+    "UELocationInfo": {
+      "description": "目标UE位置信息",
+      "type": "object",
+      "properties": {
+        "map_id": {
+          "description": "map_id, POC约束：map_id取值范围[0~100]",
+          "type": "integer",
+          "format": "int32",
+          "example": 10
+        },
+        "x": {
+          "description": "单位为cm，取值必须为正数",
+          "type": "integer",
+          "format": "int32",
+          "example": 10
+        },
+        "y": {
+          "description": "单位为cm，取值必须为正数",
+          "type": "integer",
+          "format": "int32",
+          "example": 10
+        },
+        "z": {
+          "description": "单位为cm，取值必须为正数",
+          "type": "integer",
+          "format": "int32",
+          "example": 10
+        }
+      }
+    },
+    "VoidJSON": {
+      "description": "void json",
+      "type": "object"
+    }
+  }
+}

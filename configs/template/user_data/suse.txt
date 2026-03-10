@@ -1,0 +1,58 @@
+#!/bin/bash
+# Startup script for Suse12_SPC5 IPV4 #
+
+echo "app_instance_id_key=($$APP_INSTANCE_ID)" >> /home/init.txt
+
+function mask() {
+declare -A dic
+dic=(([255]=8 [254]=7 [252]=6 [248]=5 [240]=4 [224]=3 [192]=2 [128]=1 [0]=0))
+arr=
+a=$((echo "$1" | awk -F "/" '{print $2}'))
+ip=$((echo "$1" | awk -F "/" '{print $1}'))
+for e in $(( seq 1 4));do
+if ((($a>=8)))
+then
+a=$[$a-8]
+arr=$arr${dic[8]}"."
+elif ((($a>=0)))
+then
+arr=$arr${dic[$a]}"."
+a=$[$a-8]
+else
+arr=$arr${dic[0]}"."
+fi
+done
+result=${arr%?}
+}
+
+rm -f /etc/sysconfig/network/*ifcfg-e*
+rm -f /etc/sysconfig/network/*ifroute-e*
+rm -f /etc/sysconfig/network/*routes*
+netname1=`ip a | grep '^2:' | awk -F ':' '{print $2}'|sed 's/^[ \t]*//g'`
+netname2=`ip a | grep '^3:' | awk -F ':' '{print $2}'|sed 's/^[ \t]*//g'`
+netname3=`ip a | grep '^4:' | awk -F ':' '{print $2}'|sed 's/^[ \t]*//g'`
+
+echo "BOOTPROTO=static" >> /etc/sysconfig/network/"ifcfg-${netname1}"
+echo "STARTMODE=$auto" >> /etc/sysconfig/network/"ifcfg-${netname1}"
+echo "IPADDR=$APP_Internet_IP$" >> /etc/sysconfig/network/"ifcfg-${netname1}"
+echo "NETMASK=$APP_Internet_MASK$" >> /etc/sysconfig/network/"ifcfg-${netname1}"
+
+echo "default $APP_Internet_GW$ - ${netname1}" >> /etc/sysconfig/network/"ifcfg-${netname1}"
+
+echo "BOOTPROTO=static" >> /etc/sysconfig/network/"ifcfg-${netname2}"
+echo "STARTMODE=$auto" >> /etc/sysconfig/network/"ifcfg-${netname2}"
+echo "IPADDR=$APP_N6_IP$" >> /etc/sysconfig/network/"ifcfg-${netname2}"
+echo "NETMASK=$APP_N6_MASK$" >> /etc/sysconfig/network/"ifcfg-${netname2}"
+
+echo "BOOTPROTO=static" >> /etc/sysconfig/network/"ifcfg-${netname3}"
+echo "STARTMODE=$auto" >> /etc/sysconfig/network/"ifcfg-${netname3}"
+echo "IPADDR=$APP_MP1_IP$" >> /etc/sysconfig/network/"ifcfg-${netname3}"
+echo "NETMASK=$APP_MP1_MASK$" >> /etc/sysconfig/network/"ifcfg-${netname3}"
+
+mask $UE_IP_SEGMENT$
+echo "$ip      $APP_N6_GW$  $result     ${netname2}"  >> /etc/sysconfig/network/routes
+
+mask $UE_IP_SEGMENT$
+echo "$ip      $APP_N6_GW$  $result     ${netname2}"  >> /etc/sysconfig/network/routes
+
+systemctl restart network

@@ -1,0 +1,24 @@
+global:
+  mepagent:
+    enabled: <IS_MEP_AGENT>
+    configmapname: <CONFIGMAP_NAME>
+  namespace:
+    enabled: <IS_NAMESPACE>
+
+appconfig:
+  appnamespace: <NAMESPACE>
+  aksk:
+    secretname: <random_value>
+    accesskey: <akvalue>
+    secretkey: <skvalue>
+    appInsId: <idvalue>
+
+serviceconfig:
+#  - servicename: face-recognition
+#    port: 9999
+#    version: 1.0
+#    protocol: HTTP
+#    appnamespace: default
+imagelocation:
+  domainname: <IMAGE_DOMAIN_NAME>
+  project: <IMAGE_PROJECT>

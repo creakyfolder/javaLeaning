@@ -1,0 +1,12 @@
+DC_ID:
+  type: string
+  default: FS_M:Manager_VPC
+  description: DC_ID
+az_dc:
+  type: string
+  default: nova
+  description: AZ.DZ
+ue_ip_segment:
+  type: string
+  default: 0.0.0.0/0
+  description: ue_ip_segment

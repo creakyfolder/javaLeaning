@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~    Copyright 2021 Huawei Technologies Co., Ltd.
+  ~
+  ~    Licensed under the Apache License, Version 2.0 (the "License");
+  ~    you may not use this file except in compliance with the License.
+  ~    You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~    Unless required by applicable law or agreed to in writing, software
+  ~    distributed under the License is distributed on an "AS IS" BASIS,
+  ~    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~    See the License for the specific language governing permissions and
+  ~    limitations under the License.
+  -->
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.edgegallery.developer.mapper.application.container.HelmChartMapper">
+
+    <resultMap id="HelmChartMap" type="org.edgegallery.developer.model.application.container.HelmChart">
+        <id property="id" column="id"/>
+        <result property="applicationId" column="app_id"/>
+        <result property="name" column="name"/>
+        <result property="helmChartFileId" column="helm_chart_file_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="helmChartFileList" column="helm_chart_file_list"
+                typeHandler="org.edgegallery.developer.model.handler.JsonCollectionTypeHandler"/>
+    </resultMap>
+
+    <sql id="HelmChartAllColumn">
+        id, app_id, name, helm_chart_file_id,create_time,helm_chart_file_list
+    </sql>
+
+    <insert id="createHelmChart">
+        insert into tbl_container_helm_chart (id, app_id, name, helm_chart_file_id,create_time,helm_chart_file_list)
+        values
+        (#{helmChart.id}, #{applicationId}, #{helmChart.name}, #{helmChart.helmChartFileId},#{helmChart.createTime},
+        #{helmChart.helmChartFileList, jdbcType=OTHER, typeHandler=org.edgegallery.developer.model.handler.JsonCollectionTypeHandler})
+    </insert>
+
+    <delete id="deleteHelmChart" parameterType="String">
+        DELETE FROM tbl_container_helm_chart WHERE id = #{id};
+        DELETE FROM tbl_uploaded_file WHERE file_id = #{helmChartId};
+    </delete>
+
+    <select id="getHelmChartById" parameterType="String" resultMap="HelmChartMap">
+        SELECT
+        <include refid="HelmChartAllColumn"/>
+        FROM tbl_container_helm_chart where id = #{id}
+    </select>
+
+    <select id="getHelmChartByFileId" parameterType="String" resultMap="HelmChartMap">
+        SELECT
+        <include refid="HelmChartAllColumn"/>
+        FROM tbl_container_helm_chart where helm_chart_file_id = #{fileId}
+    </select>
+
+    <select id="getHelmChartsByAppId" parameterType="String" resultMap="HelmChartMap">
+        SELECT
+        <include refid="HelmChartAllColumn"/>
+        FROM tbl_container_helm_chart where app_id = #{applicationId} order by create_time desc
+    </select>
+
+</mapper>
